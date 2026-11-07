@@ -42,18 +42,19 @@ class InventoryPage(BasePage):
     
     def logout(self):
         """
-        Alur logout yang tahan banting (robust) terhadap animasi React.
-        1. Klik burger menu.
-        2. Tunggu elemen Logout benar-benar VISIBLE (menjamin animasi sidebar selesai).
-        3. Klik elemen Logout (method self.click di BasePage sudah menangani element_to_be_clickable).
+        Alur logout yang tahan banting terhadap animasi React dan Race Condition.
         """
-        # Langkah 1: Klik burger menu
+        # 1. Klik burger menu
         self.click(self.BURGER_MENU_BTN)
         
-        # Langkah 2: Tunggu sampai link Logout benar-benar muncul di layar (visible)
-        # Ini adalah kunci agar tidak gagal klik karena animasi yang belum selesai
-        self.wait.until(EC.visibility_of_element_located(self.LOGOUT_LINK))
+        # 2. Tunggu tombol logout benar-benar bisa diklik (menjamin sidebar sudah terbuka)
+        logout_element = self.wait.until(EC.element_to_be_clickable(self.LOGOUT_LINK))
         
-        # Langkah 3: Klik logout (menggunakan method click dari BasePage yang sudah 
-        # memiliki explicit wait untuk element_to_be_clickable)
-        self.click(self.LOGOUT_LINK)
+        # 3. Klik menggunakan JavaScript. 
+        # Ini adalah trik industri untuk menghindari masalah 'click intercepted' 
+        # oleh animasi/overlay sidebar yang sering terjadi di React.
+        self.driver.execute_script("arguments[0].click();", logout_element)
+        
+        # 4. KRUSIAL: Tunggu secara eksplisit sampai URL benar-benar berubah ke halaman login.
+        # Ini mencegah test membaca URL sebelum proses redirect selesai (Race Condition).
+        self.wait.until(lambda driver: driver.current_url == "https://www.saucedemo.com/")
